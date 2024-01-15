@@ -1,0 +1,92 @@
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+public class ExcelDataConsolidator {
+
+    public static void main(String[] args) {
+        // Folder containing Excel files
+        String inputFolderPath = "input_folder";
+
+        // Output Excel file
+        String outputFilePath = "output.xlsx";
+
+        try {
+            // Create a new workbook for output
+            Workbook outputWorkbook = new XSSFWorkbook();
+            Sheet outputSheet = outputWorkbook.createSheet("ConsolidatedSheet");
+
+            // List to store Excel file names
+            List<String> excelFileNames = new ArrayList<>();
+
+            // Get list of Excel files in the folder
+            File folder = new File(inputFolderPath);
+            File[] listOfFiles = folder.listFiles();
+
+            if (listOfFiles != null) {
+                for (File file : listOfFiles) {
+                    if (file.isFile() && file.getName().endsWith(".xlsx")) {
+                        excelFileNames.add(file.getName());
+                        copySheetToOutput(file, outputSheet);
+                    }
+                }
+            }
+
+            // Write Excel file names to the first column of the output sheet
+            writeExcelFileNames(excelFileNames, outputSheet);
+
+            // Save the consolidated workbook to file
+            try (FileOutputStream outputStream = new FileOutputStream(new File(outputFilePath))) {
+                outputWorkbook.write(outputStream);
+            }
+
+            System.out.println("Consolidation completed successfully!");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void copySheetToOutput(File inputFile, Sheet outputSheet) throws IOException {
+        try (FileInputStream inputStream = new FileInputStream(inputFile)) {
+            Workbook inputWorkbook = WorkbookFactory.create(inputStream);
+            Sheet inputSheet = inputWorkbook.getSheetAt(0);
+
+            for (int i = 0; i < inputSheet.getPhysicalNumberOfRows(); i++) {
+                Row inputRow = inputSheet.getRow(i);
+                Row outputRow = outputSheet.createRow(outputSheet.getPhysicalNumberOfRows());
+
+                for (int j = 0; j < inputRow.getPhysicalNumberOfCells(); j++) {
+                    Cell inputCell = inputRow.getCell(j);
+                    Cell outputCell = outputRow.createCell(j);
+
+                    if (inputCell != null) {
+                        outputCell.setCellValue(inputCell.toString());
+                    }
+                }
+            }
+        }
+    }
+
+    private static void writeExcelFileNames(List<String> excelFileNames, Sheet outputSheet) {
+        int rowNum = 0;
+        for (String fileName : excelFileNames) {
+            Row row = outputSheet.getRow(rowNum);
+            if (row == null) {
+                row = outputSheet.createRow(rowNum);
+            }
+
+            Cell cell = row.createCell(0);
+            cell.setCellValue(fileName);
+
+            rowNum++;
+        }
+    }
+}
